@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A4 Photo Capture and PDF Generation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        .container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .video-container,
+        .image-container {
+            width: 45%;
+            min-width: 300px;
+            aspect-ratio: 210 / 297;
+            position: relative;
+        }
+
+        #video,
+        #capturedImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .button-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
+        .label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <div class="label">Video Feed</div>
+        </div>
+        <div class="image-container">
+            <img id="capturedImage" alt="Captured A4 Image">
+            <div class="label">Captured Image</div>
+        </div>
+    </div>
+    <div class="button-container">
+        <button id="captureButton">Capture A4 Photo</button>
+        <button id="generatePdfButton" disabled>Generate A4 PDF</button>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const captureButton = document.getElementById('captureButton');
+        const generatePdfButton = document.getElementById('generatePdfButton');
+        const capturedImage = document.getElementById('capturedImage');
+
+        const A4_RATIO = 210 / 297;
+
+        async function setupCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'environment',
+                    aspectRatio: { ideal: A4_RATIO }
+                }
+            });
+            video.srcObject = stream;
+        }
+
+        function captureA4Photo() {
+            const canvas = document.createElement('canvas');
+            const aspectRatio = video.videoWidth / video.videoHeight;
+            let targetWidth, targetHeight;
+
+            // Adjust canvas size based on the current video aspect ratio
+            if (aspectRatio > A4_RATIO) {
+                targetHeight = video.videoHeight;
+                targetWidth = targetHeight * A4_RATIO;
+            } else {
+                targetWidth = video.videoWidth;
+                targetHeight = targetWidth / A4_RATIO;
+            }
+
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+
+            const ctx = canvas.getContext('2d');
+            // Center the image capture
+            ctx.drawImage(video, (video.videoWidth - targetWidth) / 2, (video.videoHeight - targetHeight) / 2, targetWidth, targetHeight, 0, 0, targetWidth, targetHeight);
+
+            capturedImage.src = canvas.toDataURL('image/jpeg');
+            capturedImage.style.display = 'block';
+            generatePdfButton.disabled = false;
+        }
+
+        function generateA4PDF() {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const imgWidth = 210; // A4 width in mm
+            const imgHeight = 297; // A4 height in mm
+
+            pdf.addImage(capturedImage.src, 'JPEG', 0, 0, imgWidth, imgHeight);
+            pdf.save('captured_a4_image.pdf');
+        }
+
+        captureButton.addEventListener('click', captureA4Photo);
+        generatePdfButton.addEventListener('click', generateA4PDF);
+
+        setupCamera();
+    </script>
+</body>
+
+</html>
